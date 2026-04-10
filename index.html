@@ -41,6 +41,7 @@ button:hover {
 .chord {
     color: #4fc3f7;
     font-weight: bold;
+    cursor: pointer;
 }
 </style>
 </head>
@@ -52,13 +53,33 @@ button:hover {
 
 <button onclick="processText()">Zpracovat</button>
 <button onclick="copyText()">Kopírovat</button>
+<button onclick="transpose(1)">+1</button>
+<button onclick="transpose(-1)">-1</button>
+<button onclick="undo()">Zpět</button>
 
 <h3>Výstup:</h3>
 <div id="output" class="output" contenteditable="true"></div>
 
 <script>
 
-// ===== převod textu na akordy =====
+const NOTES = ["C","C#","D","D#","E","F","F#","G","G#","A","B","H"];
+
+let history = [];
+
+// ===== uložit stav =====
+function saveState() {
+    history.push(document.getElementById("output").innerHTML);
+    if (history.length > 50) history.shift();
+}
+
+// ===== undo =====
+function undo() {
+    if (history.length === 0) return;
+    let last = history.pop();
+    document.getElementById("output").innerHTML = last;
+}
+
+// ===== parser (původní) =====
 function processText() {
     let text = document.getElementById("input").value;
     let result = "";
@@ -128,31 +149,93 @@ function processText() {
     }
 
     document.getElementById("output").innerHTML = result;
-    highlightChords();
 }
 
-// ===== vytvoření akordu =====
+// ===== vytvoření =====
 function makeChord(chord) {
-    return `<span class="chord">[${chord}]</span>`;
+    return `<span class="chord" onclick="cycleChord(this)">[${chord}]</span>`;
 }
 
-// ===== zvýraznění při psaní =====
-function highlightChords() {
-    let el = document.getElementById("output");
+// ===== split =====
+function splitChord(chord) {
+    let match = chord.match(/^([A-H](#|b)?)(.*)$/);
+    if (!match) return null;
+
+    return {
+        root: match[1],
+        rest: match[3] || ""
+    };
+}
+
+// ===== klikání =====
+function cycleChord(el) {
+    saveState();
 
     let text = el.innerText;
 
-    let html = text.replace(/\[([^\]]+)\]/g, '<span class="chord">[$1]</span>');
+    let full = text.match(/^\[([^\]]+)\]$/);
+    if (full) {
+        let p = splitChord(full[1]);
+        if (p && p.rest.length > 0) {
+            el.innerText = `[${p.root}]${p.rest}`;
+            return;
+        }
+    }
 
-    el.innerHTML = html;
+    let mid = text.match(/^\[([A-H](#|b)?)\](.*)$/);
+    if (mid) {
+        let root = mid[1];
+        let rest = mid[3];
+
+        if (root.length > 1) {
+            el.innerText = `[${root[0]}]${root.slice(1)}${rest}`;
+            return;
+        }
+
+        el.outerHTML = root + rest;
+        return;
+    }
 }
 
-// ===== live update (už bez chyby) =====
-document.getElementById("output").addEventListener("input", () => {
-    highlightChords();
-});
+// ===== transpozice (jen span.chord!) =====
+function transpose(step) {
+    saveState();
 
-// ===== kopírování =====
+    let chords = document.querySelectorAll("#output .chord");
+
+    chords.forEach(el => {
+        let text = el.innerText;
+        let match = text.match(/^\[([^\]]+)\]$/);
+        if (!match) return;
+
+        let newChord = transposeChord(match[1], step);
+        el.innerText = `[${newChord}]`;
+    });
+}
+
+// ===== transpozice jednoho =====
+function transposeChord(chord, step) {
+
+    let parsed = splitChord(chord);
+    if (!parsed) return chord;
+
+    let {root, rest} = parsed;
+
+    root = root.replace("Db","C#")
+               .replace("Eb","D#")
+               .replace("Gb","F#")
+               .replace("Ab","G#")
+               .replace("Bb","A#");
+
+    let index = NOTES.indexOf(root);
+    if (index === -1) return chord;
+
+    let newIndex = (index + step + NOTES.length) % NOTES.length;
+
+    return NOTES[newIndex] + rest;
+}
+
+// ===== copy =====
 function copyText() {
     let text = document.getElementById("output").innerText;
     navigator.clipboard.writeText(text);
