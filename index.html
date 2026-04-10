@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<title>Akordy – editor</title>
+<style>
+body {
+    font-family: Arial;
+    margin: 20px;
+    background: #121212;
+    color: #e0e0e0;
+}
+textarea {
+    width: 100%;
+    height: 220px;
+    font-family: monospace;
+    background: #1e1e1e;
+    color: #ffffff;
+    border: 1px solid #444;
+    padding: 10px;
+}
+button {
+    padding: 10px;
+    margin-top: 10px;
+    margin-right: 10px;
+    background: #2c2c2c;
+    color: #fff;
+    border: 1px solid #555;
+    cursor: pointer;
+}
+button:hover {
+    background: #3a3a3a;
+}
+.output {
+    white-space: pre-wrap;
+    background: #1e1e1e;
+    padding: 10px;
+    border: 1px solid #444;
+    outline: none;
+}
+.chord {
+    color: #4fc3f7;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h2>Akordy → editor</h2>
+
+<textarea id="input" placeholder="Vlož text..."></textarea><br>
+
+<button onclick="processText()">Zpracovat</button>
+<button onclick="copyText()">Kopírovat</button>
+
+<h3>Výstup:</h3>
+<div id="output" class="output" contenteditable="true"></div>
+
+<script>
+
+// ===== převod textu na akordy =====
+function processText() {
+    let text = document.getElementById("input").value;
+    let result = "";
+    let i = 0;
+
+    while (i < text.length) {
+
+        if (text[i] === "[") {
+            let end = text.indexOf("]", i);
+            if (end !== -1) {
+                let chord = text.slice(i+1, end);
+                result += makeChord(chord);
+                i = end + 1;
+                continue;
+            }
+        }
+
+        if (/[A-H]/.test(text[i])) {
+
+            let chord = text[i];
+            i++;
+
+            if (text[i] === "#" || text[i] === "b") {
+                chord += text[i];
+                i++;
+            }
+
+            if (text[i] === "m") {
+                chord += "m";
+                i++;
+            }
+
+            if (text.slice(i, i+3) === "add") {
+                let match = text.slice(i).match(/^add\d+/);
+                if (match) {
+                    chord += match[0];
+                    i += match[0].length;
+                }
+            }
+
+            else if (text.slice(i, i+3) === "sus") {
+                let match = text.slice(i).match(/^sus\d*/);
+                if (match) {
+                    chord += match[0];
+                    i += match[0].length;
+                }
+            }
+
+            while (/[0-9]/.test(text[i])) {
+                chord += text[i];
+                i++;
+            }
+
+            if (text[i] === "/" && /[A-H]/.test(text[i+1])) {
+                chord += "/";
+                i++;
+                chord += text[i];
+                i++;
+            }
+
+            result += makeChord(chord);
+            continue;
+        }
+
+        result += text[i];
+        i++;
+    }
+
+    document.getElementById("output").innerHTML = result;
+    highlightChords();
+}
+
+// ===== vytvoření akordu =====
+function makeChord(chord) {
+    return `<span class="chord">[${chord}]</span>`;
+}
+
+// ===== zvýraznění při psaní =====
+function highlightChords() {
+    let el = document.getElementById("output");
+
+    let text = el.innerText;
+
+    let html = text.replace(/\[([^\]]+)\]/g, '<span class="chord">[$1]</span>');
+
+    el.innerHTML = html;
+}
+
+// ===== live update (už bez chyby) =====
+document.getElementById("output").addEventListener("input", () => {
+    highlightChords();
+});
+
+// ===== kopírování =====
+function copyText() {
+    let text = document.getElementById("output").innerText;
+    navigator.clipboard.writeText(text);
+}
+
+</script>
+
+</body>
+</html>
