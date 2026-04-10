@@ -43,6 +43,9 @@ button:hover {
     font-weight: bold;
     cursor: pointer;
 }
+label {
+    margin-left: 10px;
+}
 </style>
 </head>
 <body>
@@ -56,6 +59,11 @@ button:hover {
 <button onclick="transpose(1)">+1</button>
 <button onclick="transpose(-1)">-1</button>
 <button onclick="undo()">Zpět</button>
+
+<label>
+    <input type="checkbox" id="wrapToggle" checked>
+    Automatické závorky
+</label>
 
 <h3>Výstup:</h3>
 <div id="output" class="output" contenteditable="true"></div>
@@ -79,14 +87,18 @@ function undo() {
     document.getElementById("output").innerHTML = last;
 }
 
-// ===== parser (původní) =====
+// ===== parser =====
 function processText() {
+
+    let wrap = document.getElementById("wrapToggle").checked;
     let text = document.getElementById("input").value;
+
     let result = "";
     let i = 0;
 
     while (i < text.length) {
 
+        // EXISTUJÍCÍ [akord] → vždy zachovat
         if (text[i] === "[") {
             let end = text.indexOf("]", i);
             if (end !== -1) {
@@ -97,7 +109,8 @@ function processText() {
             }
         }
 
-        if (/[A-H]/.test(text[i])) {
+        // NOVÝ akord → jen pokud je zapnuto
+        if (wrap && /[A-H]/.test(text[i])) {
 
             let chord = text[i];
             i++;
@@ -197,7 +210,7 @@ function cycleChord(el) {
     }
 }
 
-// ===== transpozice (jen span.chord!) =====
+// ===== transpozice (jen akordy) =====
 function transpose(step) {
     saveState();
 
@@ -213,7 +226,7 @@ function transpose(step) {
     });
 }
 
-// ===== transpozice jednoho =====
+// ===== transpozice =====
 function transposeChord(chord, step) {
 
     let parsed = splitChord(chord);
