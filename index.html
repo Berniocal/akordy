@@ -46,10 +46,22 @@ button:hover {
 label {
     margin-left: 10px;
 }
+.html-download {
+    float: right;
+    margin-top: 0;
+    font-size: 12px;
+    padding: 7px 10px;
+    opacity: .8;
+}
+@media (max-width: 600px) {
+    .html-download { float: none; display: block; margin: 0 0 10px 0; }
+}
 </style>
 </head>
 <body>
 
+<!-- bernio-download-html -->
+<button class="html-download" type="button" onclick="downloadHtml()">⬇️ Stáhnout HTML</button>
 <h2>Akordy → editor</h2>
 
 <textarea id="input" placeholder="Vlož text..."></textarea><br>
@@ -252,6 +264,19 @@ function transposeChord(chord, step) {
 function copyText() {
     let text = document.getElementById("output").innerText;
     navigator.clipboard.writeText(text);
+}
+
+function downloadHtml() {
+    const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+    const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'akordy-editor.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 </script>
